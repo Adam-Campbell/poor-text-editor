@@ -51,8 +51,8 @@ class Editor {
     handleKeyDown = (e: KeyboardEvent) : void => {
         e.preventDefault();
         const { key } = e;
-        //console.log(e);
-        if (key === 'Shift') {
+        
+        if (key === 'Shift' || key === 'Control' || key === 'Alt' || key === 'Meta') {
             return;
         }
         if (key === 'Backspace') {
@@ -68,7 +68,6 @@ class Editor {
             return;
         }
         this.addChar(key);
-        //console.log(this.state);
     }
 
     private addChar(charString: string) : void {
@@ -114,6 +113,12 @@ class Editor {
         this.container.innerHTML = '';
         let text = '';
         for (let char of this.state.chars) {
+            if (char.char === " ") {
+                // The cursor position does not consistently respect a trailing space literal, 
+                // so we convert it to a non-breaking space to put it in the DOM
+                text += "\u00A0";
+                continue;
+            }
             text += char.char;
         }
         const textNode = document.createTextNode(text);
