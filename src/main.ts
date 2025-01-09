@@ -26,81 +26,108 @@
  * 
  */
 
+import { Char, EditorState, defaultState } from './types';
 
 
-const editor = document.getElementById('pte-container');
+class Editor {
 
-//editor?.addEventListener("keydown", e => e.preventDefault());
+    private state: EditorState;
+    private container: HTMLElement;
 
-type TextNode = {
-    text: string;
-    bold?: boolean;
-    italic?: boolean;
-    underline?: boolean;
-}
+    constructor(initialState: EditorState = defaultState) {
+        const container = document.getElementById('pte-container');
+        if (!container) {
+            throw new Error('Container not found');
+        }
+        this.container = container;
+        this.state = initialState;
+        
+    }
 
-type EditorState = {
-    textNodes: TextNode[];
-    isBold: boolean;
-    isItalic: boolean;
-    isUnderline: boolean;
-    cursorPosition: number;
-}
+    public init() : void {
+        this.container.addEventListener("keydown", this.handleKeyDown);
+    }
 
+    handleKeyDown = (e: KeyboardEvent) : void => {
+        e.preventDefault();
+        const { key } = e;
+        //console.log(e);
+        if (key === 'Shift') {
+            return;
+        }
+        if (key === 'Backspace') {
+            this.removeChar();
+            return;
+        }
+        if (key === 'ArrowLeft') {
+            this.moveCursor('left');
+            return;
+        }
+        if (key === 'ArrowRight') {
+            this.moveCursor('right');
+            return;
+        }
+        this.addChar(key);
+        //console.log(this.state);
+    }
 
-const testRender = () => {
-    const sampleText : TextNode[] = [
-        { text: "Hello World!", bold: true },
-        { text: " It is me, your " },
-        { text: "friendly", italic: true },
-        { text: " text editor!" }
-    ];
-    
-    for (let node of sampleText) {
-        let { bold, italic, underline, text } = node;
-        if (!bold && !italic && !underline) {
-            const el = document.createTextNode(text);
-            editor?.appendChild(el);
+    private addChar(charString: string) : void {
+        const newChar: Char = {
+            char: charString,
+            bold: this.state.isBold,
+            italic: this.state.isItalic,
+            underline: this.state.isUnderline
+        };
+        this.state.chars.splice(this.state.cursorPosition, 0, newChar);
+        this.state.cursorPosition++;
+        this.render();
+    }
+
+    private removeChar() : void {
+        if (this.state.cursorPosition === 0) {
+            return;
+        }
+        this.state.chars.splice(this.state.cursorPosition - 1, 1);
+        this.state.cursorPosition--;
+        this.render();
+    }
+
+    private moveCursor(direction: 'left' | 'right') : void {
+        if (direction === 'left') {
+            if (this.state.cursorPosition === 0) {
+                return;
+            }
+            this.state.cursorPosition--;
         } else {
-            const el = document.createElement('span');
-            el.textContent = text;
-            if (bold) el.style.fontWeight = 'bold';
-            if (italic) el.style.fontStyle = 'italic';
-            if (underline) el.style.textDecoration = 'underline';
-            editor?.appendChild(el);
+            if (this.state.cursorPosition === this.state.chars.length) {
+                return;
+            }
+            this.state.cursorPosition++;
         }
+        this.render();
     }
-}
 
-window.testRender = testRender;
-window.editor = editor;
-
-const nodes: TextNode[] = [];
-
-
-const simpleState: string = "";
-
-const handleKeyDown = (e: KeyboardEvent) => {
-    e.preventDefault();
-    const { key } = e;
-    console.log(key);
-    if (key === "1") {
-        const children = editor?.childNodes;
-        if (children) {
-            const boldSpan = children[0];
-            console.log(boldSpan);
-            document.getSelection()?.setPosition(editor, 1);
-            //document.getSelection()?.setPosition(children[0], 2)
-            console.log(boldSpan.childNodes)
+    /**
+     * Extremely naive implementation for now
+     */
+    private render() : void {
+        this.container.innerHTML = '';
+        let text = '';
+        for (let char of this.state.chars) {
+            text += char.char;
         }
+        const textNode = document.createTextNode(text);
+        this.container.appendChild(textNode);
+        const range = document.createRange();
+        range.setStart(textNode, this.state.cursorPosition);
+        range.setEnd(textNode, this.state.cursorPosition);
+        const selection = window.getSelection();
+        selection.removeAllRanges();
+        selection.addRange(range);
     }
 }
 
 
-editor?.addEventListener("keydown", handleKeyDown);
 
-
-
-
-
-
+const editorInstance = new Editor();
+editorInstance.init();
